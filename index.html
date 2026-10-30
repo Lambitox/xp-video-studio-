@@ -92,6 +92,9 @@
   </main>
 
   <script>
+    // Replace this placeholder with your Render backend URL after deployment.
+    const API_BASE_URL = "https://YOUR-RENDER-SERVICE.onrender.com";
+
     const promptEl = document.getElementById("prompt");
     const generateBtn = document.getElementById("generateBtn");
     const statusCard = document.getElementById("statusCard");
@@ -109,7 +112,7 @@
 
     async function checkBackend() {
       try {
-        const response = await fetch("/api/health");
+        const response = await fetch(`${API_BASE_URL}/api/health`);
         const data = await response.json();
         if (!response.ok || !data.apiKeyConfigured) {
           setupNotice.classList.remove("hidden");
@@ -147,7 +150,7 @@
       setStatus("Sending prompt to the AI video model…", "This creates real generated footage, not a zooming still image. It can take a few minutes. Keep this page open.");
 
       try {
-        const response = await fetch("/api/generate", {
+        const response = await fetch(`${API_BASE_URL}/api/generate`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prompt, resolution: document.getElementById("resolution").value })

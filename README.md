@@ -38,6 +38,7 @@ Recommended for this all-in-one project: deploy the whole folder to a Node.js ho
 5. In the service's **Environment** settings, add:
    - `GEMINI_API_KEY` = your private Google AI API key
    - `GEMINI_VIDEO_MODEL` = `gemini-omni-1.1-flash`
+  - `FRONTEND_ORIGIN` = `https://admirable-belekoy-0d732f.netlify.app`
 6. Deploy the service, then open its public URL.
 
 Video generation can take a while. Some hosting plans/proxies have request time limits; if the host times out long requests, deploy on a platform with a suitable request timeout or change the architecture to asynchronous jobs. Do not assume that a successful website deployment means the Google model is enabled for your account.
@@ -87,3 +88,7 @@ Open `http://localhost:3000`.
 
 - Gemini Omni video generation: https://ai.google.dev/gemini-api/docs/omni
 - Gemini API key setup: https://aistudio.google.com/apikey
+
+
+## Keep the existing Netlify front end
+After Render deploys, copy its service URL (for example `https://your-service.onrender.com`). In `public/index.html`, replace `https://YOUR-RENDER-SERVICE.onrender.com` in the `API_BASE_URL` setting with your actual Render URL, then upload the updated `public/index.html` to the existing Netlify site and publish it. Keep the `FRONTEND_ORIGIN` environment variable set to your Netlify site address in Render.

@@ -10,8 +10,20 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 const MODEL = process.env.GEMINI_VIDEO_MODEL || "gemini-omni-1.1-flash";
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "https://admirable-belekoy-0d732f.netlify.app";
 
 app.disable("x-powered-by");
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin === FRONTEND_ORIGIN || !origin) {
+    if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  }
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   contentSecurityPolicy: {

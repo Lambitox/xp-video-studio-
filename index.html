@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="XP Video Studio turns text prompts into AI-generated video using a secure server-side AI connection.">
+  <title>XP Video Studio — AI Video Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *{font-family:"Google Sans",sans-serif}
+    body{background:#131314;color:#e8eaed}
+    .gemini-input{background:#1e1f20;border:1px solid #3c4043;border-radius:24px}
+    .gemini-card{background:#1e1f20;border:1px solid #2d2e30;border-radius:18px}
+    .btn-primary{background:#e8eaed;color:#202124}
+    .btn-primary:disabled{opacity:.45;cursor:not-allowed}
+    .spinner{width:18px;height:18px;border:2px solid #5f6368;border-top-color:#8ab4f8;border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    textarea{max-height:220px}
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+  <main class="flex-1 max-w-3xl w-full mx-auto px-4 pt-8 pb-36">
+    <header class="text-center mt-5 mb-8">
+      <div class="inline-flex items-center gap-2 rounded-full border border-[#3c4043] px-3 py-1 text-xs text-[#bdc1c6] mb-5">
+        <span class="w-2 h-2 rounded-full bg-[#81c995]"></span> AI video generation
+      </div>
+      <h1 class="text-4xl sm:text-5xl leading-tight font-medium">
+        <span class="bg-gradient-to-r from-[#4a8df6] via-[#a86ee7] to-[#e84a8a] bg-clip-text text-transparent">XP Video</span><br>Studio
+      </h1>
+      <p class="text-[#9aa0a6] text-sm mt-3">Describe a scene. Generate real AI video.</p>
+    </header>
+
+    <section id="setupNotice" class="hidden gemini-card p-4 mb-5 border-amber-700/50">
+      <h2 class="font-semibold text-amber-200 mb-1">Backend setup required</h2>
+      <p id="setupText" class="text-sm text-[#bdc1c6]">The server needs configuration.</p>
+    </section>
+
+    <section id="resultCard" class="hidden gemini-card overflow-hidden mb-5">
+      <div class="relative bg-black">
+        <video id="videoPlayer" controls playsinline class="w-full aspect-video"></video>
+      </div>
+      <div class="p-4 sm:p-5">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <span class="text-xs uppercase tracking-wide text-[#81c995]">AI-generated video</span>
+          <span id="resolutionLabel" class="text-xs text-[#9aa0a6]">720p</span>
+        </div>
+        <p id="resultPrompt" class="text-sm mt-3 whitespace-pre-wrap"></p>
+        <div class="flex flex-wrap gap-2 mt-4">
+          <a id="downloadBtn" href="#" download="xp-video.mp4" class="btn-primary rounded-full px-5 py-2.5 text-sm font-medium">Download MP4</a>
+          <button id="newVideoBtn" class="rounded-full border border-[#5f6368] px-5 py-2.5 text-sm">Create another</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="statusCard" class="hidden gemini-card p-4 mb-5" aria-live="polite">
+      <div class="flex gap-3 items-start">
+        <div id="statusSpinner" class="spinner mt-0.5"></div>
+        <div class="flex-1">
+          <p id="statusTitle" class="font-medium text-sm">Preparing your video…</p>
+          <p id="statusMessage" class="text-sm text-[#9aa0a6] mt-1">Video generation can take a few minutes. Keep this page open.</p>
+          <button id="retryBtn" class="hidden mt-3 rounded-full border border-[#5f6368] px-4 py-2 text-sm">Try again</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="gemini-card p-4 sm:p-5">
+      <label for="prompt" class="block text-sm font-medium mb-3">What video do you want to create?</label>
+      <textarea id="prompt" rows="4" maxlength="4000" placeholder="Example: A realistic Nigerian teacher helps adult learners practise reading in a bright classroom in Benin City. The learners take turns reading aloud. Natural movement, documentary camera style, warm daylight, clear classroom ambience." class="w-full bg-transparent outline-none resize-y text-base leading-7 placeholder:text-[#777b80]"></textarea>
+      <div class="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-[#3c4043]">
+        <div class="flex items-center gap-2 text-xs text-[#9aa0a6]">
+          <label for="resolution">Resolution</label>
+          <select id="resolution" class="bg-[#1e1f20] border border-[#3c4043] rounded-lg px-2 py-1.5 text-[#e8eaed]">
+            <option value="720p" selected>720p</option>
+            <option value="1080p">1080p</option>
+          </select>
+        </div>
+        <button id="generateBtn" class="btn-primary rounded-full w-11 h-11 text-2xl flex items-center justify-center" aria-label="Generate video">↑</button>
+      </div>
+      <p class="text-xs text-[#9aa0a6] mt-3">Uses a real AI video model. Availability, generation time, and charges depend on your Google AI account and model access.</p>
+    </section>
+
+    <section class="mt-5">
+      <p class="text-xs text-[#9aa0a6] mb-2">Prompt tips</p>
+      <div class="flex flex-wrap gap-2">
+        <button class="sample rounded-full border border-[#3c4043] px-3 py-2 text-xs text-[#bdc1c6]" data-prompt="Realistic documentary footage in a Nigerian adult literacy classroom. An adult teacher writes simple English words on a whiteboard while adult learners practise reading aloud. Natural gestures, believable Nigerian classroom details, warm daylight, smooth camera movement.">Adult literacy class</button>
+        <button class="sample rounded-full border border-[#3c4043] px-3 py-2 text-xs text-[#bdc1c6]" data-prompt="Realistic footage of Nigerian trainee teachers in a teacher-training workshop. A facilitator demonstrates an engaging lesson while trainees take notes and practise teaching in small groups. Natural expressions, authentic classroom setting, smooth camera movement, warm daylight.">Teacher training</button>
+        <button class="sample rounded-full border border-[#3c4043] px-3 py-2 text-xs text-[#bdc1c6]" data-prompt="Cinematic but realistic footage of a Nigerian secondary-school student preparing for WAEC in a neat classroom. The student reads an English textbook, writes notes, and asks a teacher a question. Authentic Nigerian school setting, natural movement, soft daylight.">WAEC preparation</button>
+      </div>
+    </section>
+    <footer class="text-center text-xs text-[#777b80] mt-10">XP Video Studio · Keep your API key private.</footer>
+  </main>
+
+  <script>
+    const promptEl = document.getElementById("prompt");
+    const generateBtn = document.getElementById("generateBtn");
+    const statusCard = document.getElementById("statusCard");
+    const statusSpinner = document.getElementById("statusSpinner");
+    const statusTitle = document.getElementById("statusTitle");
+    const statusMessage = document.getElementById("statusMessage");
+    const retryBtn = document.getElementById("retryBtn");
+    const resultCard = document.getElementById("resultCard");
+    const videoPlayer = document.getElementById("videoPlayer");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const setupNotice = document.getElementById("setupNotice");
+    let lastPrompt = "";
+    let currentObjectUrl = null;
+    let busy = false;
+
+    async function checkBackend() {
+      try {
+        const response = await fetch("/api/health");
+        const data = await response.json();
+        if (!response.ok || !data.apiKeyConfigured) {
+          setupNotice.classList.remove("hidden");
+          document.getElementById("setupText").textContent =
+            "The website is running, but the server owner must add GEMINI_API_KEY in the hosting environment settings before videos can be generated.";
+        }
+      } catch {
+        setupNotice.classList.remove("hidden");
+        document.getElementById("setupText").textContent =
+          "The backend could not be reached. Deploy the complete project to a Node.js host, not as a single static HTML file.";
+      }
+    }
+
+    function setStatus(title, message, isError = false) {
+      statusCard.classList.remove("hidden");
+      statusTitle.textContent = title;
+      statusMessage.textContent = message;
+      statusSpinner.classList.toggle("hidden", isError);
+      retryBtn.classList.toggle("hidden", !isError);
+    }
+
+    async function generate() {
+      if (busy) return;
+      const prompt = promptEl.value.trim();
+      if (!prompt) {
+        promptEl.focus();
+        setStatus("Add a prompt", "Describe the people or subject, what they do, the location, camera movement, and visual style.", true);
+        return;
+      }
+      lastPrompt = prompt;
+      busy = true;
+      generateBtn.disabled = true;
+      generateBtn.textContent = "…";
+      resultCard.classList.add("hidden");
+      setStatus("Sending prompt to the AI video model…", "This creates real generated footage, not a zooming still image. It can take a few minutes. Keep this page open.");
+
+      try {
+        const response = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt, resolution: document.getElementById("resolution").value })
+        });
+
+        const contentType = response.headers.get("content-type") || "";
+        if (!response.ok) {
+          let message = "Video generation failed. Please try again.";
+          if (contentType.includes("application/json")) {
+            const errorData = await response.json();
+            message = errorData.error || message;
+          } else {
+            message = (await response.text()).slice(0, 400) || message;
+          }
+          throw new Error(message);
+        }
+        if (!contentType.includes("video/")) {
+          throw new Error("The server response was not a video file. Check the backend logs and model configuration.");
+        }
+
+        const blob = await response.blob();
+        if (!blob.size) throw new Error("The model returned an empty video file. Please try again.");
+        if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+        currentObjectUrl = URL.createObjectURL(blob);
+        videoPlayer.src = currentObjectUrl;
+        downloadBtn.href = currentObjectUrl;
+        downloadBtn.download = `xp-video-${Date.now()}.mp4`;
+        document.getElementById("resultPrompt").textContent = prompt;
+        document.getElementById("resolutionLabel").textContent = document.getElementById("resolution").value;
+        resultCard.classList.remove("hidden");
+        statusCard.classList.add("hidden");
+        videoPlayer.load();
+        resultCard.scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (error) {
+        setStatus("Could not generate video", error.message || "Unexpected error. Check your backend and Google AI account.", true);
+      } finally {
+        busy = false;
+        generateBtn.disabled = false;
+        generateBtn.textContent = "↑";
+      }
+    }
+
+    generateBtn.addEventListener("click", generate);
+    retryBtn.addEventListener("click", generate);
+    document.getElementById("newVideoBtn").addEventListener("click", () => {
+      resultCard.classList.add("hidden");
+      promptEl.focus();
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    });
+    promptEl.addEventListener("keydown", event => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        generate();
+      }
+    });
+    document.querySelectorAll(".sample").forEach(button => {
+      button.addEventListener("click", () => {
+        promptEl.value = button.dataset.prompt;
+        promptEl.focus();
+      });
+    });
+    checkBackend();
+  </script>
+</body>
+</html>
